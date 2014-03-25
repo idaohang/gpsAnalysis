@@ -1,5 +1,8 @@
 GPS Analysis
 ============
+
+A basic explanation of whats expected from us here http://pastebin.com/ezPMDBHz
+
 Flowchart
 ---------
 ### file i/o
