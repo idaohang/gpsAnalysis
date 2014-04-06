@@ -1,7 +1,7 @@
 /*
  ============================================================================
  Name        : GPSAnalyse.c
- Author      : Pï¿½draig Cunningham
+ Author      : P�draig Cunningham
  Version     : 2.0
   ============================================================================
  */
@@ -9,17 +9,15 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
-#include <string.h>
+#include <strings.h>
+
 
 #define d2r (M_PI / 180.0)
-//#define DEBUG
-#define MAX_COLUMN_WIDTH 65
 
 // The node structure for storing paths
 struct node {
 	double lat;
 	double lon;
-	double elev;
 	char timeString[22];
 	struct node *next;
 };
@@ -31,96 +29,35 @@ struct timeStr {
 	int sec;
 };
 
-struct splitTracker {
-	double pathLen;
-	double elev1;
-	double elev2;
-	char *timeString1;	
-	char *timeString2;	
-};
-
 double haversine_m(double lat1, double long1, double lat2, double long2);
 int openFileAndLoadData();
 char *readStringAfterToken(char *txtstr, char *tkn, char *res, int len, int steps);
 double readDoubleAfterToken(char *txtstr, char *tkn, int steps);
 double calculate_tot_dist(struct node *lh);
-struct node* create_list(double lat, double lon, double elev, char *timeStr);
-struct node* add_to_list(double lat, double lon, double elev, char *timeStr);
+struct node* create_list(double lat, double lon, char *timeStr);
+struct node* add_to_list(double lat, double lon, char *timeStr);
 struct timeStr *timeStrFromString(char *tstring, struct timeStr *tstruct);
 int timeDiffV2(struct timeStr *t1, struct timeStr *t2);
-void draw_split_title();
-void check_path_length();
 
 struct node *head = NULL;
 struct node *curr = NULL;
-struct splitTracker tracker;
 
 char startTimeStr[25];		//Hold the start and end time strings as global vars.
 char finishTimeStr[25];
-int splitNumber = 0;
 
 
-// const char *GPX_FILE_PATH = "./inputFiles/Howth-Cross.gpx"; // location of GPX file
+//const char *GPX_FILE_PATH = "./inputFiles/Howth-Cross.gpx"; // location of GPX file
 const char *GPX_FILE_PATH = "./inputFiles/Run4.9k.gpx"; // location of GPX file
-// const char *GPX_FILE_PATH = "./inputFiles/Zell75k.gpx"; // location of GPX file
+//const char *GPX_FILE_PATH = "./inputFiles/Cycle55.gpx"; // location of GPX file
 
 int main(void) {
 
 	openFileAndLoadData();
-	draw_split_title();
 	calculate_tot_dist(head);
-	printf("\n");
+
 	return EXIT_SUCCESS;
 }
 
-void check_path_length() {
-	double averagePace = 0;
-	double speed = 0;
-	double elevationChange = 0;
-
-	#ifdef DEBUG 
-	printf("current length is %lf\n", tracker.pathLen);
-	#endif
-
-	if(tracker.pathLen >= 1000) {
-		struct timeStr tm1, tm2;
-		tm1 = *timeStrFromString(tracker.timeString1, &tm1);
-		tm2 = *timeStrFromString(tracker.timeString2, &tm2);
-		averagePace = timeDiffV2(&tm1, &tm2)/tracker.pathLen * 1000.0 / 60.0;
-		speed = tracker.pathLen / timeDiffV2(&tm1, &tm2) * 3.6;
-		elevationChange = tracker.elev1 - tracker.elev2;
-		splitNumber++;
-	
-		#ifdef DEBUG
-		printf("Elapsed Time: %d sec\n", timeDiffV2(&tm1, &tm2));
-		printf("The average pace is %4.2f m/km\n", averagePace);
-		printf("Elevation change is %4.2f m\n", elevationChange);
-		printf("Start elevation is %lf\n", tracker.elev1);
-		printf("Current elevation is %lf\n", tracker.elev2);
-		#endif
-
-		printf("%d\t\t  %lf\t   %lf\t   %lf\n", splitNumber, averagePace, speed, elevationChange);
-
-		tracker.pathLen = 0;
-		tracker.timeString1 = tracker.timeString2;
-		tracker.elev1 = tracker.elev2;
-	}
-}
-
-void draw_split_title() {
-	int i = 0;
-	for(i = 0; i < MAX_COLUMN_WIDTH; i++) {
-		printf("-");
-	}
-	printf("\n");
-	printf("Split No.\t| Pace km/min\t | Speed km/h\t | Elevation m");
-	printf("\n");
-	for(i = 0; i < MAX_COLUMN_WIDTH; i++) {
-		printf("-");
-	}
-	printf("\n");
-}
-		
 // Calculate distance between two points expressed as lat and long using
 // Haversine formula.
 double haversine_m(double lat1, double long1, double lat2, double long2) {
@@ -159,7 +96,6 @@ int openFileAndLoadData() {
 				}
 
 		// Read the text data and store the lat, lon and time data in a linked list.
-		// This operation has also been extended to read the elevation
 		while (fgets(theLine, sizeof(theLine), fpn)
 				&& ((strncmp(theLine, endOfData,7) != 0))) //finish when "</trkseg>" reached (endOfData)
 		{
@@ -168,7 +104,6 @@ int openFileAndLoadData() {
 			add_to_list(
 					readDoubleAfterToken(theLine, "lat=",5),
 					readDoubleAfterToken(theLine, "lon=",5),
-					readDoubleAfterToken(theLine, "<ele>",5),
 					timeStrPtr);
 
 			lineNum++;
@@ -196,22 +131,14 @@ double calculate_tot_dist(struct node *lh){
     		// First node
     		lat1 = ptr->lat;
     		lon1 = ptr->lon;
-    		ptr = ptr->next;
-		tracker.timeString1 = startTimeStr;		// I've started to inject my code here
-		tracker.elev1 = ptr->elev;
-    	} else {
+    		 ptr = ptr->next;
+    	}else
+    	{
     		pathLen += haversine_m(lat1, lon1, ptr->lat, ptr->lon);
-    		tracker.pathLen += haversine_m(lat1, lon1, ptr->lat, ptr->lon); //
-		tracker.elev2 = ptr->elev;
-
-		tracker.timeString2 = ptr->timeString;
-		check_path_length();			//
-
-		lat1 = ptr->lat;
+    		lat1 = ptr->lat;
     		lon1 = ptr->lon;
     		ptr = ptr->next;
-
-	}
+    	}
     }
 
     printf("Path Length: %5.0f m \n",pathLen);
@@ -272,8 +199,7 @@ double readDoubleAfterToken(char *txtstr, char *tkn, int steps){ //target string
 }
 
 // Create the list to be used to store the data
-// This function has been extended to process elevation data
-struct node* create_list(double lat, double lon, double elev, char *timeStr) {
+struct node* create_list(double lat, double lon, char *timeStr) {
 	char ts[35];
 	strcpy(ts,timeStr);
 	struct node *ptr = (struct node*) malloc(sizeof(struct node));
@@ -283,7 +209,6 @@ struct node* create_list(double lat, double lon, double elev, char *timeStr) {
 	}
 	ptr->lat = lat;
 	ptr->lon = lon;
-	ptr->elev = elev;
 	strcpy(ptr->timeString,timeStr);
 
 	ptr->next = NULL;
@@ -293,14 +218,13 @@ struct node* create_list(double lat, double lon, double elev, char *timeStr) {
 }
 
 // Add nodes to the main data list
-// This function has been extended to process elevation data
-struct node* add_to_list(double lat, double lon, double elev, char *timeStr) {
+struct node* add_to_list(double lat, double lon, char *timeStr) {
 	//char ts[35];
 	//	strcpy(ts,timeStr);
 		//printf("\n adding node to list with time as %s\n", timeStr);
 
 	if (NULL == head) {
-		return (create_list(lat, lon, elev, timeStr));
+		return (create_list(lat, lon, timeStr));
 	}
 
 	struct node *ptr = (struct node*) malloc(sizeof(struct node));
@@ -310,7 +234,6 @@ struct node* add_to_list(double lat, double lon, double elev, char *timeStr) {
 	}
 	ptr->lat = lat;
 	ptr->lon = lon;
-	ptr->elev = elev;
 	strcpy(ptr->timeString,timeStr);
 
 	ptr->next = NULL;
